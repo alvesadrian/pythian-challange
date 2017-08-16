@@ -16,7 +16,7 @@ redis_db = redis.StrictRedis(host="localhost", port=6379, db=0)
 class CatsAPI(flask_restful.Resource):
 
     def get(self):
-        response = requests.get('http://thecatapi.com/api/images/get?format=xml&results_per_page=1')
+        response = requests.get('http://thecatapi.com/api/images/get?api_key=[YOUR-API-KEY]&format=xml&results_per_page=1')
         data = xmltodict.parse(response.content)['response']['data']['images']
         redis_db.rpush('cat', json.dumps(data['image']))
         return data
