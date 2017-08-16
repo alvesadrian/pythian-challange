@@ -1,0 +1,23 @@
+ROM dockerfile/ubuntu
+
+ENV REDIS_MASTER_LISTEN="127.0.0.1" \
+    REDIS_MASTER_PASSWORD="" \
+    REDIS_MASTER_PORT_NUMBER="6379" \
+    REDIS_PASSWORD=""
+
+RUN apt-get install -y redis-server \
+    systemctl stop redis-server
+
+# log output to stdout
+RUN sed -i 's/^logfile /# logfile /g' /etc/redis/redis.conf
+RUN sed -i 's/^daemonize yes/daemonize no/' /etc/redis/redis.conf
+RUN sed -i 's/^# unixsocket /unixsocket /' /etc/redis/redis.conf
+RUN sed -i 's/^bind 127.0.0.1/bind ${REDIS_MASTER_LISTEN}/' /etc/redis/redis.conf
+RUN sed -i 's/^port 6379 /port ${REDIS_MASTER_PORT_NUMBER}/' /etc/redis/redis.conf
+
+RUN rm -rf /var/lib/apt/lists/*
+
+
+EXPOSE 6379
+
+CMD ["redis-server", "/etc/redis/redis.conf"]
