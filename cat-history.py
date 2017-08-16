@@ -1,31 +1,37 @@
-from flask import Flask, request
-from flask_restful import Resource, Api
-from json import dumps
-import xmltodict
+import flask
+import flask_restful
+import json
+import redis
 import requests
-#Create a engine for connecting to SQLite3.
-#Assuming salaries.db is in your app root folder
+import xmltodict
 
 
-app = Flask(__name__)
-api = Api(app)
-class CatAPI(Resource):
+app = flask.Flask(__name__)
+app.debug = True
+api = flask_restful.Api(app)
+
+redis_db = redis.StrictRedis(host="localhost", port=6379, db=0)
+
+
+class CatsAPI(flask_restful.Resource):
+
     def get(self):
-        response = requests.get('http://thecatapi.com/api/images/get?api_key=[YOUR-API-KEY]&format=xml&results_per_page=1')
-        return xmltodict.parse(response.content)['response']['data']['images']
+        response = requests.get('http://thecatapi.com/api/images/get?format=xml&results_per_page=1')
+        data = xmltodict.parse(response.content)['response']['data']['images']
+        redis_db.rpush('cat', json.dumps(data['image']))
+        return data
 
 
-class HistoryAPI(Resource):
-    def get(self, department_name):
-        conn = e.connect()
-        query = conn.execute("select * from salaries where Department='%s'"%department_name.upper())
-        #Query the result and get cursor.Dumping that data to a JSON is looked by extension
-        result = {'data': [dict(zip(tuple (query.keys()) ,i)) for i in query.cursor]}
-        return result
-        #We can have PUT,DELETE,POST here. But in our API GET implementation is sufficient
+class HistoryAPI(flask_restful.Resource):
 
-api.add_resource(CatAPI, '/cat')
+    def get(self):
+        history = redis_db.lrange('cat', 0, -1)
+        return {'images': [json.loads(item.decode('utf8')) for item in history]}
+
+
+api.add_resource(CatsAPI, '/cat')
 api.add_resource(HistoryAPI, '/history')
 
+
 if __name__ == '__main__':
-     app.run()
+    app.run()
